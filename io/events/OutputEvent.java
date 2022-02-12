@@ -1,20 +1,39 @@
 package io.events;
 
-// TODO: Refactor
 public enum OutputEvent {
-  MICROBIT_SHORT_BEEP("o_bs"),
-  MICROBIT_LONG_BEEP("o_bl"),
-  MICROBIT_DISPLAY_SAD("o_ds"),
-  MICROBIT_DISPLAY_HAPPY("o_dh");
+  MICROBIT_SHORT_BEEP("bs"),
+  MICROBIT_LONG_BEEP("bl"),
+  MICROBIT_DISPLAY_SAD("ds"),
+  MICROBIT_DISPLAY_HAPPY("dh"),
+  UNRECOGNISED("");
 
-  private final String text;
+  private final String eventValue;
 
-  OutputEvent(final String text) {
-    this.text = text;
+  OutputEvent(final String eventValue) {
+    this.eventValue = eventValue;
   }
 
-  @Override
-  public String toString() {
-    return text;
+  public String toEventValue() {
+    return eventValue;
   }
+
+  public boolean isValid() {
+    return this != UNRECOGNISED;
+  }
+
+  public static OutputEvent fromEventValue(String eventValue) {
+    switch (eventValue) {
+      case "bs":
+        return MICROBIT_SHORT_BEEP;
+      case "bl":
+        return MICROBIT_LONG_BEEP;
+      case "ds":
+        return MICROBIT_DISPLAY_SAD;
+      case "dh":
+        return MICROBIT_DISPLAY_HAPPY;
+      default:
+        return UNRECOGNISED;
+    }
+  }
+
 }

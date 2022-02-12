@@ -53,7 +53,7 @@ public class Attacker extends Collider implements Drawable {
 
     app.fill(textColor.red, textColor.green, textColor.blue);
     app.textAlign(PApplet.CENTER, PApplet.CENTER);
-    app.text(getDamagingInput().getDisplayValue(), position.x, position.y - 5);
+    app.text(getDamagingInput().toDisplayValue(), position.x, position.y - 5);
   }
 
   private boolean displayAsDamaged() {

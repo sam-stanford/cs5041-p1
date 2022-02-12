@@ -14,8 +14,7 @@ import interactions.game.Player;
 import interactions.game.microbitdefence.attacker.Attacker;
 import interactions.game.microbitdefence.attacker.AttackerFactory;
 import interactions.game.microbitdefence.defence.DefenceTarget;
-import io.devices.Microbit;
-import io.devices.output.OutputDevice;
+import io.devices.input.InputDevice;
 import io.events.IOEventQueues;
 import io.events.InputEvent;
 import io.events.OutputEvent;
@@ -24,15 +23,12 @@ import utils.Color;
 import utils.Position;
 import utils.Randomiser;
 
-// TODO: Rename
-// TODO: Abstract scoring system
 public class MicrobitDefence implements Interaction {
-
-  public Player player1;
-  public Player player2;
 
   private Queue<InputEvent> inputEventQueue;
   private Queue<OutputEvent> outputEventQueue;
+  private Player player;
+
   private DefenceTarget defenceTarget;
   private List<Attacker> attackers;
   private Color background;
@@ -40,17 +36,16 @@ public class MicrobitDefence implements Interaction {
   private AttackerFactory attackerFactory;
   private DisplayConfig displayConfig;
 
-  public MicrobitDefence(MicrobitDefenceConfig config, DisplayConfig displayConfig, IOEventQueues eventQueues) {
-    // TODO: Tidy this up
-    player1 = new Player(config.players.player1Name);
-    player2 = new Player(config.players.player2Name);
-    defenceTarget = new DefenceTarget(config.defenceTarget, getDefenceTargetPosition(displayConfig));
-    attackers = new ArrayList<>();
+  public MicrobitDefence(MicrobitDefenceConfig config, DisplayConfig displayConfig, IOEventQueues eventQueues,
+      Player player) {
+    this.defenceTarget = new DefenceTarget(config.defenceTarget, getDefenceTargetPosition(displayConfig));
+    this.attackers = new ArrayList<>();
     this.inputEventQueue = eventQueues.inputEventQueue;
     this.outputEventQueue = eventQueues.outputEventQueue;
-    background = displayConfig.backgroundColor;
+    this.background = displayConfig.backgroundColor;
     this.displayConfig = displayConfig;
-    attackerFactory = new AttackerFactory(config.attackers);
+    this.attackerFactory = new AttackerFactory(config.attackers);
+    this.player = player;
   }
 
   private Position getDefenceTargetPosition(DisplayConfig displayConfig) {
@@ -156,7 +151,7 @@ public class MicrobitDefence implements Interaction {
   // TODO: Take config for frequency
   private void spawnAttackers() {
     // TODO: Time limiter from config
-    float p = 0.1f;// TODO: Get proba from config - maybe replace with timeout actually
+    float p = 0.05f;// TODO: Get proba from config - maybe replace with timeout actually
     // TODO: Maybe timeout range for spawning
     boolean shouldSpawn = Randomiser.eventWithProbability(p);
     if (!shouldSpawn) {
@@ -165,7 +160,7 @@ public class MicrobitDefence implements Interaction {
 
     Position initialPosition = generateAttackerPosition(displayConfig.width, displayConfig.height);
     Position target = defenceTarget.getPosition();
-    InputEvent damagingInput = selectRandomKeyboardInput();
+    InputEvent damagingInput = selectRandomInput();
     boolean shouldSpawnBig = Randomiser.eventWithProbability(0.2f); // TODO: Get proba from config
 
     Attacker a = shouldSpawnBig
@@ -175,16 +170,10 @@ public class MicrobitDefence implements Interaction {
     attackers.add(a);
   }
 
-  private InputEvent selectRandomKeyboardInput() {
-    int r = Randomiser.intZeroToN(2);
-    switch (r) {
-      case 0:
-        return InputEvent.KEYBOARD_F;
-      case 1:
-        return InputEvent.KEYBOARD_J;
-      default:
-        return InputEvent.KEYBOARD_F;
-    }
+  private InputEvent selectRandomInput() {
+    List<InputEvent> possibleEvents = player.inputDevice.getAvailableInputEvents();
+    int r = Randomiser.intZeroToN(possibleEvents.size());
+    return possibleEvents.get(r);
   }
 
   private Position generateAttackerPosition(float displayWidth, float displayHeight) {

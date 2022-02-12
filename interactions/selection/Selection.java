@@ -120,7 +120,9 @@ public class Selection<T> implements Interaction {
   }
 
   private void drawOptions(PApplet app) {
-    for (int i = visibleCount * pageNumber; i < visibleCount; i += 1) {
+    int startIndexToShow = visibleCount * pageNumber;
+    int endIndexToShow = Math.min(options.size() - startIndexToShow - 1, startIndexToShow + visibleCount);
+    for (int i = startIndexToShow; i <= endIndexToShow; i += 1) {
       SelectionOption<T> o = options.get(i);
       o.draw(app);
     }

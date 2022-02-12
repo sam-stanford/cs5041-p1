@@ -14,7 +14,6 @@ public class Keyboard implements InputDevice {
   private Queue<InputEvent> inputEvents;
 
   private InputEvent[] availableInputEvents = new InputEvent[] {
-      InputEvent.KEYBOARD_SPACEBAR,
       InputEvent.KEYBOARD_F,
       InputEvent.KEYBOARD_J
   };

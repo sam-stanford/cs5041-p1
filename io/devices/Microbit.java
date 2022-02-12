@@ -12,22 +12,28 @@ import io.devices.output.OutputDeviceType;
 import io.events.InputEvent;
 import io.events.OutputEvent;
 import io.serial.SerialCommunicator;
+import io.serial.SerialDevice;
 import io.serial.SerialMessage;
 import io.serial.SerialMessageType;
 import io.serial.SimpleSerialCommunicator;
 import processing.core.PApplet;
 
-public class Microbit implements InputDevice, OutputDevice {
+public class Microbit implements InputDevice, OutputDevice, SerialDevice {
 
   private final int SERIAL_BAUD_RATE = 115200;
 
   private Queue<OutputEvent> outputEventQueue;
+  private String serialPort;
   private SerialCommunicator serialCommunicator;
 
   private List<InputEvent> availableInputEvents = Arrays.asList(new InputEvent[] {
-      InputEvent.KEYBOARD_SPACEBAR,
-      InputEvent.KEYBOARD_F,
-      InputEvent.KEYBOARD_J
+      InputEvent.MICROBIT_LEFT_BTN,
+      InputEvent.MICROBIT_LEFT_BTN,
+      InputEvent.MICROBIT_TILT_LEFT,
+      InputEvent.MICROBIT_TILT_RIGHT,
+      InputEvent.MICROBIT_SHAKE,
+      InputEvent.MICROBIT_MICROPHONE,
+      InputEvent.MICROBIT_FLIP,
   });
 
   private List<OutputEvent> availableOutputEvents = Arrays.asList(new OutputEvent[] {
@@ -39,7 +45,12 @@ public class Microbit implements InputDevice, OutputDevice {
 
   public Microbit(PApplet app, String serialPort) {
     this.outputEventQueue = new LinkedList<>();
-    this.serialCommunicator = new SimpleSerialCommunicator(app, serialPort, SERIAL_BAUD_RATE);
+    this.serialPort = serialPort;
+  }
+
+  @Override
+  public String getSerialPort() {
+    return this.serialPort;
   }
 
   @Override
@@ -69,7 +80,6 @@ public class Microbit implements InputDevice, OutputDevice {
 
   @Override
   public boolean acceptsOutputEvent(OutputEvent e) {
-    System.out.println(availableInputEvents.size());
     return availableOutputEvents.contains(e);
   }
 
@@ -91,5 +101,10 @@ public class Microbit implements InputDevice, OutputDevice {
       }
     }
     return events;
+  }
+
+  @Override
+  public void initialiseSerialIO(PApplet app) {
+    this.serialCommunicator = new SimpleSerialCommunicator(app, serialPort, SERIAL_BAUD_RATE);
   }
 }

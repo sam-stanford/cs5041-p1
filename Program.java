@@ -1,7 +1,6 @@
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -11,7 +10,6 @@ import config.display.DisplayConfig;
 import config.game.GameConfig;
 import config.game.hideandseek.HideAndSeekConfig;
 import config.game.microbitdefence.MicrobitDefenceConfig;
-import config.game.microbitdefence.PlayersConfig;
 import config.game.microbitdefence.attacker.AttackersConfig;
 import config.game.microbitdefence.attacker.SingleAttackerConfig;
 import config.game.microbitdefence.defence.DefenceTargetConfig;
@@ -20,15 +18,17 @@ import interactions.Interaction;
 import interactions.IntroScreen;
 import interactions.game.Game;
 import interactions.game.GameMode;
+import interactions.game.Player;
 import interactions.game.microbitdefence.attacker.DamageType;
 import interactions.selection.Selection;
 import io.devices.Keyboard;
+import io.devices.Microbit;
 import io.devices.input.InputDevice;
-import io.devices.input.InputDeviceType;
 import io.devices.output.OutputDevice;
 import io.events.IOEventQueues;
 import io.events.InputEvent;
 import io.events.OutputEvent;
+import io.serial.SerialDevice;
 import processing.core.PApplet;
 import processing.serial.Serial;
 import utils.Color;
@@ -44,7 +44,7 @@ public class Program extends PApplet {
 
   private InputDevice inputDevice1;
   private InputDevice inputDevice2;
-  private Keyboard keyboardInput;
+  private Keyboard keyboardInputDevice = new Keyboard();
   private List<OutputDevice> outputDevices;
 
   public static void main(String[] passedArgs) {
@@ -69,10 +69,10 @@ public class Program extends PApplet {
 
   @Override
   public void keyPressed() {
-    char key = this.key;
-    InputEvent e = InputEvent.fromEventValue(key, InputDeviceType.KEYBOARD);
+    String input = Character.toString(this.key);
+    InputEvent e = InputEvent.fromEventValue(input);
     if (e.isValid()) {
-      keyboardInput.addInputEvent(e);
+      keyboardInputDevice.addInputEvent(e);
     }
   }
 
@@ -107,16 +107,18 @@ public class Program extends PApplet {
   }
 
   private void startNextInteraction() {
+    resetCursorState();
     switch (currentInteraction.getType()) {
       case INTRO_SCREEN:
       case SELECTION:
-        saveSelectedValueFromSelection((Selection<?>) currentInteraction);
+        saveSelectedValueFromCurrentInteractionIfSelection(currentInteraction);
 
         Selection<?> nextSelection = generateNextSelection();
         if (nextSelection != null) {
           currentInteraction = nextSelection;
         } else {
-          currentInteraction = new Game(createGameConfig(), createDisplayConfig(), getEventQueues());
+          GameConfig gameConfig = createGameConfig(selectedGameMode, inputDevice1, inputDevice2);
+          currentInteraction = new Game(gameConfig, createDisplayConfig(), getEventQueues());
         }
         break;
 
@@ -132,7 +134,11 @@ public class Program extends PApplet {
     }
   }
 
-  private void saveSelectedValueFromSelection(Selection<?> selection) {
+  private void resetCursorState() {
+    this.cursor(PApplet.ARROW);
+  }
+
+  private void saveSelectedValueFromCurrentInteractionIfSelection(Object selection) {
     if (!(currentInteraction instanceof Selection<?>)) {
       return;
     }
@@ -145,11 +151,17 @@ public class Program extends PApplet {
     if (selectedValue instanceof InputDevice) {
       if (this.inputDevice1 == null) {
         this.inputDevice1 = (InputDevice) selectedValue;
+        if (this.inputDevice1 instanceof SerialDevice) {
+          ((SerialDevice) this.inputDevice1).initialiseSerialIO(this);
+        }
         addAsOutputDeviceIfApplicable(selectedValue);
         return;
       }
       if (inputDevice2 == null) {
         this.inputDevice2 = (InputDevice) selectedValue;
+        if (this.inputDevice2 instanceof SerialDevice) {
+          ((SerialDevice) this.inputDevice2).initialiseSerialIO(this);
+        }
         addAsOutputDeviceIfApplicable(selectedValue);
         return;
       }
@@ -169,7 +181,7 @@ public class Program extends PApplet {
     if (inputDevice1 == null) {
       return generateInputDeviceSelectionForDevice1();
     }
-    if (selectedGameMode == GameMode.HIDE_AND_SEEK_AND_DEFENCE) {
+    if (selectedGameMode == GameMode.HIDE_AND_SEEK_AND_DEFENCE && inputDevice2 == null) {
       return generateInputDeviceSelectionForDevice2();
     }
     return null;
@@ -182,14 +194,29 @@ public class Program extends PApplet {
     return new Selection<GameMode>(createDisplayConfig(), "Select a Game Mode", options);
   }
 
-  private Selection<InputDevice> generateInputDeviceSelection(String title, List<InputDevice> devicesToExclude) {
-    List<InputDevice> options = new ArrayList<>();
+  private Selection<InputDevice> generateInputDeviceSelection(String title, List<SerialDevice> devicesToExclude) {
+    List<InputDevice> options = getAvailableSerialInputDevices(devicesToExclude);
     return new Selection<InputDevice>(createDisplayConfig(), title, options);
   }
 
-  private List<InputDevice> getAvailableSerialDevices() {
-    String[] ports = Serial.list();
-    // Convert all to Microbits for now
+  private List<InputDevice> getAvailableSerialInputDevices(List<SerialDevice> devicesToExclude) {
+    List<String> ports = new ArrayList<>();
+    ports.addAll(Arrays.asList(Serial.list()));
+
+    for (SerialDevice d : devicesToExclude) {
+      ports.remove(d.getSerialPort());
+    }
+
+    List<InputDevice> devices = new ArrayList<>();
+    for (String port : ports) {
+      // Convert all to Microbits for now
+      InputDevice d = new Microbit(this, port);
+      devices.add(d);
+    }
+    if (inputDevice1 == null || !inputDevice1.equals(keyboardInputDevice)) {
+      devices.add(keyboardInputDevice);
+    }
+    return devices;
   }
 
   private Selection<InputDevice> generateInputDeviceSelectionForDevice1() {
@@ -197,8 +224,11 @@ public class Program extends PApplet {
   }
 
   private Selection<InputDevice> generateInputDeviceSelectionForDevice2() {
-    return generateInputDeviceSelection("Choose Your Input Device for Player 2",
-        Collections.singletonList(inputDevice1));
+    List<SerialDevice> devicesToExclude = inputDevice1 instanceof SerialDevice
+        ? Collections.singletonList((SerialDevice) inputDevice1)
+        : Collections.emptyList();
+
+    return generateInputDeviceSelection("Choose Your Input Device for Player 2", devicesToExclude);
   }
 
   private IOEventQueues getEventQueues() {
@@ -213,9 +243,15 @@ public class Program extends PApplet {
     return config;
   }
 
-  private GameConfig createGameConfig() {
+  private GameConfig createGameConfig(GameMode gameMode, InputDevice player1InputDevice,
+      InputDevice player2InputDevice) {
     GameConfig config = new GameConfig();
+    config.gameMode = gameMode;
     config.microbitDefence = creatMicrobitDefenceConfig();
+    config.hideAndSeek = createHideAndSeekConfig();
+    config.player1 = new Player("Player 1", player1InputDevice);
+    config.player2 = new Player("Player 2", player2InputDevice);
+    config.scoreToWin = 3;
     return config;
   }
 
@@ -253,10 +289,6 @@ public class Program extends PApplet {
     config.defenceTarget.noImageDamagedColor = new Color(255, 50, 50);
     config.defenceTarget.noImageHeight = 300;
     config.defenceTarget.noImageWidth = 300;
-
-    config.players = new PlayersConfig();
-    config.players.player1Name = "Player 1";
-    config.players.player2Name = "Player 2";
 
     return config;
   }

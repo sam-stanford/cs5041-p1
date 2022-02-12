@@ -3,7 +3,7 @@ package interactions.game;
 public enum GameMode {
   HIDE_AND_SEEK_ONLY("Hide and Seek"),
   DEFENCE_ONLY("Defence"),
-  HIDE_AND_SEEK_AND_DEFENCE("Full Game (Recommended)");
+  HIDE_AND_SEEK_AND_DEFENCE("Full Game");
 
   private String displayValue;
 

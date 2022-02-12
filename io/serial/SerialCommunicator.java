@@ -16,23 +16,28 @@ public abstract class SerialCommunicator {
 
   public abstract String generateMessageString(SerialMessage message);
 
-  public abstract String readNextMessageString();
+  public abstract char getMessageDelimeter();
 
   public abstract SerialMessage parseMessageString(String message);
 
   public void writeMessage(SerialMessage message) {
     String m = this.generateMessageString(message);
     port.write(m);
+    System.out.println("TO SERIAL: " + m);
   }
 
   public boolean hasNextMessage() {
-    // TODO
-    return false;
+    return port.available() > 0;
   }
 
   public SerialMessage readNextMessage() {
-    String s = this.readNextMessageString();
+    String s = readNextMessageString();
     return this.parseMessageString(s);
+  }
+
+  private String readNextMessageString() {
+    char delimeter = getMessageDelimeter();
+    return port.readStringUntil(delimeter);
   }
 
   public Queue<SerialMessage> readAllMessages() {

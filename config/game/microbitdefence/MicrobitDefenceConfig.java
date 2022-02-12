@@ -6,5 +6,4 @@ import config.game.microbitdefence.defence.DefenceTargetConfig;
 public class MicrobitDefenceConfig {
   public DefenceTargetConfig defenceTarget;
   public AttackersConfig attackers;
-  public PlayersConfig players;
 }
