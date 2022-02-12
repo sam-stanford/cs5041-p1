@@ -3,21 +3,23 @@ package interactions.selection;
 import java.util.ArrayList;
 import java.util.List;
 
+import config.display.DisplayConfig;
 import interactions.Interaction;
 import interactions.InteractionType;
 import processing.core.PApplet;
+import utils.Color;
 import utils.Position;
 
-public class Selection implements Interaction {
+public class Selection<T> implements Interaction {
 
-  private List<SelectionOption> options;
-  private SelectionOption selectedOption;
+  private List<SelectionOption<T>> options;
+  private SelectionOption<T> selectedOption;
   private String title;
 
   private int pageNumber = 0;
   private int visibleCount;
 
-  private int backgroundColor = 250;
+  private Color backgroundColor;
 
   private float windowMargin = 100;
   private float titleAreaHeight = 400;
@@ -25,10 +27,11 @@ public class Selection implements Interaction {
   private float optionWidth = 400;
   private float optionHeight = 100;
 
-  public Selection(String title, List<String> options, float windowWidth, float windowHeight) {
+  public Selection(DisplayConfig displayConfig, String title, List<T> options) {
     this.title = title;
-    createOptions(options, windowWidth, windowHeight);
-    calculateVisibleCount(options.size(), windowHeight);
+    this.backgroundColor = displayConfig.backgroundColor;
+    createOptions(displayConfig, options);
+    calculateVisibleCount(options.size(), displayConfig.width);
   }
 
   private void calculateVisibleCount(int numOptions, float windowHeight) {
@@ -36,12 +39,12 @@ public class Selection implements Interaction {
     this.visibleCount = (int) Math.floor(optionAreaHeight / (optionHeight + optionGutter));
   }
 
-  private void createOptions(List<String> values, float windowWidth, float windowHeight) {
+  private void createOptions(DisplayConfig displayConfig, List<T> values) {
     this.options = new ArrayList<>();
     for (int i = 0; i < values.size(); i += 1) {
       this.options.add(
-          new SelectionOption(
-              getOptionPosition(i, windowWidth),
+          new SelectionOption<T>(
+              getOptionPosition(i, displayConfig.width),
               optionWidth,
               optionHeight,
               values.get(i)));
@@ -73,7 +76,7 @@ public class Selection implements Interaction {
 
   @Override
   public void onClick(float mouseX, float mouseY) {
-    for (SelectionOption o : options) {
+    for (SelectionOption<T> o : options) {
       if (o.isHovered(mouseX, mouseY)) {
         selectedOption = o;
         return;
@@ -81,7 +84,7 @@ public class Selection implements Interaction {
     }
   }
 
-  public String getSelectedValue() {
+  public T getSelectedValue() {
     return selectedOption.getValue();
   }
 
@@ -91,7 +94,7 @@ public class Selection implements Interaction {
 
   @Override
   public void draw(PApplet app) {
-    app.background(backgroundColor);
+    app.background(backgroundColor.red, backgroundColor.blue, backgroundColor.green);
     drawTitle(app);
     if (options.size() == 0) {
       drawNoOptionsMessage(app);
@@ -118,7 +121,7 @@ public class Selection implements Interaction {
 
   private void drawOptions(PApplet app) {
     for (int i = visibleCount * pageNumber; i < visibleCount; i += 1) {
-      SelectionOption o = options.get(i);
+      SelectionOption<T> o = options.get(i);
       o.draw(app);
     }
   }
@@ -128,7 +131,7 @@ public class Selection implements Interaction {
   }
 
   private void updateMouseCursor(PApplet app) {
-    for (SelectionOption o : options) {
+    for (SelectionOption<T> o : options) {
       if (o.isHovered(app.mouseX, app.mouseY)) {
         app.cursor(PApplet.HAND);
         return;

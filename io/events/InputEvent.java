@@ -1,4 +1,4 @@
-package io.events.input;
+package io.events;
 
 import io.devices.input.InputDeviceType;
 

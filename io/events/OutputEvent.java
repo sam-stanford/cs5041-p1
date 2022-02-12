@@ -1,11 +1,11 @@
-package io.events.output;
+package io.events;
 
 // TODO: Refactor
 public enum OutputEvent {
-  MICROBIT_LOW_BEEP("o_l"),
-  MICROBIT_HIGH_BEEP("o_h"),
-  MICROBIT_DISPLAY_SAD("o_s"),
-  MICROBIT_DISPLAY_HAPPY("o_p");
+  MICROBIT_SHORT_BEEP("o_bs"),
+  MICROBIT_LONG_BEEP("o_bl"),
+  MICROBIT_DISPLAY_SAD("o_ds"),
+  MICROBIT_DISPLAY_HAPPY("o_dh");
 
   private final String text;
 

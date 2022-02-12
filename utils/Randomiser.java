@@ -21,4 +21,8 @@ public class Randomiser {
   public static float floatZeroToOne() {
     return generator.nextFloat();
   }
+
+  public static boolean eventWithProbability(float probability) {
+    return floatZeroToOne() < probability;
+  }
 }

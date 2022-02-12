@@ -3,5 +3,5 @@ package drawable;
 import processing.core.PApplet;
 
 public interface Drawable {
-  public void draw(PApplet processingApplet);
+  public void draw(PApplet app);
 }

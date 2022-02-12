@@ -5,19 +5,19 @@ import processing.core.PApplet;
 import utils.Color;
 import utils.Position;
 
-public class SelectionOption implements Drawable {
+public class SelectionOption<T> implements Drawable {
 
   private Position position;
   private float width;
   private float height;
-  private String value;
+  private T value;
 
   private Color fillColor = new Color(200, 200, 0);
   private Color hoveredFillColor = new Color(255, 255, 0);
   private Color textColor = new Color(0);
   private Color hoveredTextColor = new Color(40);
 
-  public SelectionOption(Position position, float width, float height, String value) {
+  public SelectionOption(Position position, float width, float height, T value) {
     this.position = position;
     this.width = width;
     this.height = height;
@@ -44,7 +44,7 @@ public class SelectionOption implements Drawable {
 
     app.textAlign(PApplet.CENTER, PApplet.CENTER);
     app.fill(c.red, c.blue, c.green);
-    app.text(value, position.x + (width / 2), position.y + (height / 2));
+    app.text(value.toString(), position.x + (width / 2), position.y + (height / 2));
   }
 
   public boolean isHovered(float mouseX, float mouseY) {
@@ -53,7 +53,7 @@ public class SelectionOption implements Drawable {
     return xInBounds && yInBounds;
   }
 
-  public String getValue() {
+  public T getValue() {
     return value;
   }
 }
