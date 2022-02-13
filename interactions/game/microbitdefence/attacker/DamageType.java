@@ -14,12 +14,12 @@ public enum DamageType {
       OutputEvent.MICROBIT_DISPLAY_SAD, OutputEvent.MICROBIT_LONG_BEEP
   };
 
-  public int toScore() {
+  public int toDamage() {
     switch (this) {
       case SMALL:
-        return 1;
+        return 10;
       case BIG:
-        return 3;
+        return 30;
       default:
         return 0;
     }

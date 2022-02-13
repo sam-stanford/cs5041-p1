@@ -5,25 +5,20 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import io.devices.input.InputDevice;
-import io.devices.input.InputDeviceType;
-import io.devices.output.OutputDevice;
-import io.devices.output.OutputDeviceType;
+import io.devices.serial.SerialDevice;
 import io.events.InputEvent;
 import io.events.OutputEvent;
 import io.serial.SerialCommunicator;
-import io.serial.SerialDevice;
 import io.serial.SerialMessage;
-import io.serial.SerialMessageType;
 import io.serial.SimpleSerialCommunicator;
 import processing.core.PApplet;
 
-public class Microbit implements InputDevice, OutputDevice, SerialDevice {
+public class Microbit implements IODevice, SerialDevice {
 
   private final int SERIAL_BAUD_RATE = 115200;
 
-  private Queue<OutputEvent> outputEventQueue;
-  private String serialPort;
+  private Queue<InputEvent> inputEvents;
+  private String serialPortName;
   private SerialCommunicator serialCommunicator;
 
   private List<InputEvent> availableInputEvents = Arrays.asList(new InputEvent[] {
@@ -43,14 +38,15 @@ public class Microbit implements InputDevice, OutputDevice, SerialDevice {
       OutputEvent.MICROBIT_SHORT_BEEP,
   });
 
-  public Microbit(PApplet app, String serialPort) {
-    this.outputEventQueue = new LinkedList<>();
-    this.serialPort = serialPort;
+  public Microbit(PApplet app, String serialPortName) {
+    this.inputEvents = new LinkedList<>();
+    this.serialPortName = serialPortName;
+    this.serialCommunicator = new SimpleSerialCommunicator(app, serialPortName, SERIAL_BAUD_RATE);
   }
 
   @Override
-  public String getSerialPort() {
-    return this.serialPort;
+  public String getSerialPortName() {
+    return this.serialPortName;
   }
 
   @Override
@@ -61,21 +57,6 @@ public class Microbit implements InputDevice, OutputDevice, SerialDevice {
   @Override
   public List<OutputEvent> getAvailableOutputEvents() {
     return availableOutputEvents;
-  }
-
-  @Override
-  public OutputDeviceType getOutputDeviceType() {
-    return OutputDeviceType.MICROBIT;
-  }
-
-  @Override
-  public InputDeviceType getInputDeviceType() {
-    return InputDeviceType.MICROBIT;
-  }
-
-  @Override
-  public Queue<OutputEvent> getOutputEventQueue() {
-    return this.outputEventQueue;
   }
 
   @Override
@@ -92,19 +73,15 @@ public class Microbit implements InputDevice, OutputDevice, SerialDevice {
   }
 
   @Override
-  public Queue<InputEvent> getInputEvents() {
-    Queue<SerialMessage> messages = serialCommunicator.readAllMessages();
-    Queue<InputEvent> events = new LinkedList<>();
-    for (SerialMessage m : messages) {
-      if (m.type == SerialMessageType.INPUT) {
-        events.add(m.inputEvent);
-      }
-    }
-    return events;
+  public void addInputEvent(InputEvent e) {
+    inputEvents.add(e);
   }
 
   @Override
-  public void initialiseSerialIO(PApplet app) {
-    this.serialCommunicator = new SimpleSerialCommunicator(app, serialPort, SERIAL_BAUD_RATE);
+  public Queue<InputEvent> getInputEvents() {
+    Queue<InputEvent> q = inputEvents;
+    inputEvents = new LinkedList<>();
+    return q;
   }
+
 }

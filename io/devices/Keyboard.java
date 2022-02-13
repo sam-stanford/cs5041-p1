@@ -1,15 +1,15 @@
 package io.devices;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import io.devices.input.InputDevice;
-import io.devices.input.InputDeviceType;
 import io.events.InputEvent;
+import io.events.OutputEvent;
 
-public class Keyboard implements InputDevice {
+public class Keyboard implements IODevice {
 
   private Queue<InputEvent> inputEvents;
 
@@ -28,11 +28,6 @@ public class Keyboard implements InputDevice {
   }
 
   @Override
-  public InputDeviceType getInputDeviceType() {
-    return InputDeviceType.KEYBOARD;
-  }
-
-  @Override
   public Queue<InputEvent> getInputEvents() {
     Queue<InputEvent> events = this.inputEvents;
     inputEvents = new LinkedList<>();
@@ -41,5 +36,21 @@ public class Keyboard implements InputDevice {
 
   public void addInputEvent(InputEvent e) {
     inputEvents.add(e);
+  }
+
+  @Override
+  public List<OutputEvent> getAvailableOutputEvents() {
+    return Collections.emptyList();
+  }
+
+  @Override
+  public boolean acceptsOutputEvent(OutputEvent e) {
+    return false;
+  }
+
+  @Override
+  public void outputEvent(OutputEvent e) {
+    // Do nothing
+    return;
   }
 }

@@ -1,18 +1,12 @@
 package config.game;
 
-import config.game.hideandseek.HideAndSeekConfig;
+import java.util.List;
+
 import config.game.microbitdefence.MicrobitDefenceConfig;
-import interactions.game.GameMode;
 import interactions.game.Player;
 
 public class GameConfig {
-  public GameMode gameMode;
-
   public int scoreToWin;
-
-  public Player player1;
-  public Player player2;
-
+  public List<Player> players;
   public MicrobitDefenceConfig microbitDefence;
-  public HideAndSeekConfig hideAndSeek;
 }

@@ -15,6 +15,7 @@ public class Selection<T> implements Interaction {
   private List<SelectionOption<T>> options;
   private SelectionOption<T> selectedOption;
   private String title;
+  private SelectionType type;
 
   private int pageNumber = 0;
   private int visibleCount;
@@ -27,9 +28,10 @@ public class Selection<T> implements Interaction {
   private float optionWidth = 400;
   private float optionHeight = 100;
 
-  public Selection(DisplayConfig displayConfig, String title, List<T> options) {
+  public Selection(DisplayConfig displayConfig, String title, SelectionType type, List<T> options) {
     this.title = title;
     this.backgroundColor = displayConfig.backgroundColor;
+    this.type = type;
     createOptions(displayConfig, options);
     calculateVisibleCount(options.size(), displayConfig.width);
   }
@@ -100,7 +102,6 @@ public class Selection<T> implements Interaction {
       drawNoOptionsMessage(app);
     } else {
       drawOptions(app);
-      drawPageNavigation(app);
     }
     updateMouseCursor(app);
   }
@@ -128,10 +129,6 @@ public class Selection<T> implements Interaction {
     }
   }
 
-  private void drawPageNavigation(PApplet app) {
-    // TODO
-  }
-
   private void updateMouseCursor(PApplet app) {
     for (SelectionOption<T> o : options) {
       if (o.isHovered(app.mouseX, app.mouseY)) {
@@ -140,6 +137,10 @@ public class Selection<T> implements Interaction {
       }
     }
     app.cursor(PApplet.ARROW);
+  }
+
+  public SelectionType getSelectionType() {
+    return type;
   }
 
 }

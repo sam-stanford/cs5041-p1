@@ -1,59 +1,71 @@
 package interactions.game;
 
+import java.util.List;
+
 import clickable.Clickable;
 import config.display.DisplayConfig;
 import config.game.GameConfig;
+import config.game.microbitdefence.MicrobitDefenceConfig;
 import interactions.Interaction;
 import interactions.InteractionType;
 import interactions.game.microbitdefence.MicrobitDefence;
-import io.events.IOEventQueues;
 import processing.core.PApplet;
 
 public class Game implements Interaction, Clickable {
 
-  private MicrobitDefence microbitDefence;
-  // private HideAndSeek hideAndSeek;
-  private Interaction currentInteraction;
+  private MicrobitDefence currentRound;
 
-  private int roundNumber = 0; // TODO
-
-  private Player player1;
-  private Player player2;
+  private List<Player> players;
   private int scoreToWin;
+  private MicrobitDefenceConfig roundConfig;
+  private DisplayConfig displayConfig;
 
-  public Game(GameConfig config, DisplayConfig displayConfig, IOEventQueues eventQueues) {
-    this.scoreToWin = config.scoreToWin;
-    this.player1 = config.player1;
-    this.player2 = config.player2;
-
-    this.microbitDefence = new MicrobitDefence(config.microbitDefence, displayConfig, eventQueues, player1);
-    // this.hideAndSeek = new HideAndSeek();
-
-    switch (config.gameMode) {
-      case HIDE_AND_SEEK_AND_DEFENCE:
-        // TODO
-        break;
-
-      case HIDE_AND_SEEK_ONLY:
-        // TODO
-        break;
-
-      case DEFENCE_ONLY:
-        // TODO
-        break;
+  public Game(GameConfig config, DisplayConfig displayConfig) {
+    if (config.players.size() == 0) {
+      throw new NotEnoughPlayersException();
     }
+    this.scoreToWin = config.scoreToWin;
+    this.players = config.players;
+    this.roundConfig = config.microbitDefence;
+    this.displayConfig = displayConfig;
+    startNewRound();
+  }
 
-    this.currentInteraction = microbitDefence; // TODO: Move to switch
+  private void startNewRound() {
+    currentRound = new MicrobitDefence(roundConfig, displayConfig, players);
   }
 
   @Override
   public void draw(PApplet app) {
-    currentInteraction.draw(app);
+    if (currentRound.isDone() && isMultiPlayer()) {
+      currentRound.getCurrentLeadingPlayer().score += 1;
+      if (!playerHasWon()) {
+        startNewRound();
+      }
+    }
+    currentRound.draw(app);
   }
 
   @Override
   public boolean isDone() {
-    return player1.score >= scoreToWin || player2.score >= scoreToWin;
+    return playerHasWon() || (isSinglePlayer() && currentRound.isDone());
+  }
+
+  private boolean playerHasWon() {
+    for (Player p : players) {
+      if (p.score >= scoreToWin) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isSinglePlayer() {
+    return players.size() == 1;
+  }
+
+  private boolean isMultiPlayer() {
+    return players.size() > 1;
   }
 
   @Override
@@ -63,11 +75,20 @@ public class Game implements Interaction, Clickable {
 
   @Override
   public void onClick(float mouseX, float mouseY) {
-    currentInteraction.onClick(mouseX, mouseY);
+    currentRound.onClick(mouseX, mouseY);
   }
 
   public Player getCurrentLeadingPlayer() {
-    return player1.score > player2.score ? player1 : player2;
+    Player leadingPlayer = players.get(0);
+    for (Player p : players) {
+      if (p.score > leadingPlayer.score) {
+        leadingPlayer = p;
+      }
+    }
+    return leadingPlayer;
+  }
+
+  private class NotEnoughPlayersException extends RuntimeException {
   }
 
 }

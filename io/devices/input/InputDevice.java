@@ -8,7 +8,7 @@ import io.events.InputEvent;
 public interface InputDevice {
   public List<InputEvent> getAvailableInputEvents();
 
-  public InputDeviceType getInputDeviceType();
-
   public Queue<InputEvent> getInputEvents();
+
+  public void addInputEvent(InputEvent e);
 }

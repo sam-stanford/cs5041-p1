@@ -1,35 +1,31 @@
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
-import java.util.stream.IntStream;
 
 import config.display.DisplayConfig;
 import config.game.GameConfig;
-import config.game.hideandseek.HideAndSeekConfig;
 import config.game.microbitdefence.MicrobitDefenceConfig;
 import config.game.microbitdefence.attacker.AttackersConfig;
 import config.game.microbitdefence.attacker.SingleAttackerConfig;
 import config.game.microbitdefence.defence.DefenceTargetConfig;
+import images.microbit.MicrobitColor;
 import interactions.EndScreen;
 import interactions.Interaction;
 import interactions.IntroScreen;
 import interactions.game.Game;
-import interactions.game.GameMode;
 import interactions.game.Player;
 import interactions.game.microbitdefence.attacker.DamageType;
 import interactions.selection.Selection;
+import interactions.selection.SelectionType;
+import io.devices.DisplayOnlyMicrobit;
+import io.devices.IODevice;
+import io.devices.IODeviceType;
 import io.devices.Keyboard;
 import io.devices.Microbit;
 import io.devices.input.InputDevice;
-import io.devices.output.OutputDevice;
-import io.events.IOEventQueues;
+import io.devices.serial.SerialDevice;
 import io.events.InputEvent;
-import io.events.OutputEvent;
-import io.serial.SerialDevice;
 import processing.core.PApplet;
 import processing.serial.Serial;
 import utils.Color;
@@ -37,16 +33,30 @@ import utils.ImageLoader;
 
 public class Program extends PApplet {
 
-  private static Queue<InputEvent> inputEventQueue = new LinkedList<>();
-  private static Queue<OutputEvent> outputEventQueue = new LinkedList<>();
+  // TODO
+  // private enum SetupStage {
+  // PLAYER_COUNT_SELECTION,
+  // INPUT_DEVICE_SELECTION,
+  // PLAYER_COLOR_SELECTION,
+  // }
 
+  private Keyboard keyboard = new Keyboard();
+  // TODO
+  // private Queue<SetupStage> remainingSetupStages = new LinkedList<>(
+  // Arrays.asList(new SetupStage[] {
+  // SetupStage.PLAYER_COLOR_SELECTION,
+  // SetupStage.INPUT_DEVICE_SELECTION,
+  // SetupStage.PLAYER_COLOR_SELECTION,
+  // }));
+
+  // private SetupStage currentSetupStage = null;
   private Interaction currentInteraction;
-  private GameMode selectedGameMode;
 
-  private InputDevice inputDevice1;
-  private InputDevice inputDevice2;
-  private Keyboard keyboardInputDevice = new Keyboard();
-  private List<OutputDevice> outputDevices;
+  private int playerCount;
+  private List<IODevice> playerIoDevices = new ArrayList<>();
+  private List<MicrobitColor> playerColors = new ArrayList<>();
+
+  private IODeviceType previosulySelectedDeviceType;
 
   public static void main(String[] passedArgs) {
     String[] appletArgs = new String[] { "Program" };
@@ -55,7 +65,6 @@ public class Program extends PApplet {
 
   public Program() {
     currentInteraction = new IntroScreen();
-    outputDevices = new ArrayList<>();
   }
 
   @Override
@@ -73,72 +82,111 @@ public class Program extends PApplet {
     String input = "k_" + Character.toString(this.key);
     InputEvent e = InputEvent.fromEventValue(input);
     if (e.isValid()) {
-      keyboardInputDevice.addInputEvent(e);
+      keyboard.addInputEvent(e);
     }
   }
 
   // Called by Processing:
   // https://processing.org/reference/libraries/serial/Serial_serialEvent_.html
   public void serialEvent(Serial serial) {
-    String s = serial.readStringUntil(':');
-    if (s != null) {
-      System.out.println(s);
+    String message = serial.readStringUntil(':');
+    if (message == null) {
+      return;
     }
+
+    message = message.substring(0, message.length() - 1);
+    InputEvent event = InputEvent.fromEventValue(message);
+    if (!event.isValid()) {
+      return;
+    }
+
+    String serialPortName = serial.port.getPortName();
+    InputDevice d = getMatchingIoDeviceForSerialPort(serialPortName);
+    if (d != null) {
+      d.addInputEvent(event);
+    }
+  }
+
+  private InputDevice getMatchingIoDeviceForSerialPort(String portName) {
+    for (IODevice device : playerIoDevices) {
+      if (device instanceof SerialDevice) {
+        SerialDevice s = (SerialDevice) device;
+        if (s.getSerialPortName().equals(portName)) {
+          return device;
+        }
+      }
+    }
+    return null;
   }
 
   @Override
   public void draw() {
-    getInputEvents();
-    handleOutputEvents();
-
     if (currentInteraction.isDone()) {
-      clearInputEventQueue();
       startNextInteraction();
     }
     currentInteraction.draw(this);
-  }
-
-  private void getInputEvents() {
-    if (inputDevice1 != null) {
-      inputEventQueue.addAll(inputDevice1.getInputEvents());
-    }
-    if (inputDevice2 != null) {
-      inputEventQueue.addAll(inputDevice2.getInputEvents());
-    }
-  }
-
-  private void handleOutputEvents() {
-    while (!outputEventQueue.isEmpty()) {
-      OutputEvent e = outputEventQueue.poll();
-      sendOutputEventToAllAcceptingOutputDevivces(e);
-    }
-  }
-
-  private void sendOutputEventToAllAcceptingOutputDevivces(OutputEvent e) {
-    for (OutputDevice d : outputDevices) {
-      if (d.acceptsOutputEvent(e)) {
-        d.outputEvent(e);
-      }
-    }
-  }
-
-  private void clearInputEventQueue() {
-    inputEventQueue = new LinkedList<>();
   }
 
   private void startNextInteraction() {
     resetCursorState();
     switch (currentInteraction.getType()) {
       case INTRO_SCREEN:
+        currentInteraction = createPlayerCountSelection();
+        return;
       case SELECTION:
-        saveSelectedValueFromCurrentInteractionIfSelection(currentInteraction);
+        Selection<?> s = (Selection<?>) currentInteraction;
+        switch (s.getSelectionType()) {
+          case PLAYER_COUNT:
+            this.playerCount = (int) s.getSelectedValue();
+            this.currentInteraction = createIoDeviceTypeSelection();
+            break;
 
-        Selection<?> nextSelection = generateNextSelection();
-        if (nextSelection != null) {
-          currentInteraction = nextSelection;
-        } else {
-          GameConfig gameConfig = createGameConfig(selectedGameMode, inputDevice1, inputDevice2);
-          currentInteraction = new Game(gameConfig, createDisplayConfig(), getEventQueues());
+          case IO_DEVICE_TYPE:
+            IODeviceType selectedType = (IODeviceType) s.getSelectedValue();
+            saveSelectedDeviceType(selectedType);
+            if (selectedType == IODeviceType.KEYBOARD) {
+              if (playerIoDevices.size() == playerCount) {
+                currentInteraction = createPlayerColorSelection();
+                break;
+              }
+              currentInteraction = createIoDeviceTypeSelection();
+              break;
+            }
+            currentInteraction = createSerialPortSelection();
+            break;
+
+          case SERIAL_PORT:
+            String serialPortName = (String) s.getSelectedValue();
+            IODevice device = null;
+            switch (previosulySelectedDeviceType) {
+              case MICROBIT:
+                device = new Microbit(this, serialPortName);
+                break;
+              case DISPLAY_ONLY_MICROBIT:
+                device = new DisplayOnlyMicrobit(this, serialPortName);
+                break;
+              default:
+                break;
+            }
+            if (device != null) {
+              playerIoDevices.add(device);
+            }
+            if (playerIoDevices.size() == playerCount) {
+              currentInteraction = createPlayerColorSelection();
+              break;
+            }
+            currentInteraction = createIoDeviceTypeSelection();
+            break;
+
+          case COLOR:
+            MicrobitColor c = (MicrobitColor) s.getSelectedValue();
+            playerColors.add(c);
+            if (playerColors.size() != playerCount) {
+              currentInteraction = createPlayerColorSelection();
+              break;
+            }
+            currentInteraction = createGame();
+            break;
         }
         break;
 
@@ -146,7 +194,6 @@ public class Program extends PApplet {
         currentInteraction = new EndScreen();
 
       case END_SCREEN:
-        // TODO
         break;
 
       default:
@@ -158,101 +205,100 @@ public class Program extends PApplet {
     this.cursor(PApplet.ARROW);
   }
 
-  private void saveSelectedValueFromCurrentInteractionIfSelection(Object selection) {
-    if (!(currentInteraction instanceof Selection<?>)) {
-      return;
-    }
-
-    Object selectedValue = ((Selection<?>) currentInteraction).getSelectedValue();
-    if (selectedValue instanceof GameMode) {
-      this.selectedGameMode = (GameMode) selectedValue;
-      return;
-    }
-    if (selectedValue instanceof InputDevice) {
-      if (this.inputDevice1 == null) {
-        this.inputDevice1 = (InputDevice) selectedValue;
-        if (this.inputDevice1 instanceof SerialDevice) {
-          ((SerialDevice) this.inputDevice1).initialiseSerialIO(this);
-        }
-        addAsOutputDeviceIfApplicable(selectedValue);
+  private void saveSelectedDeviceType(IODeviceType selectedType) {
+    switch (selectedType) {
+      case KEYBOARD:
+        this.playerIoDevices.add(keyboard);
         return;
+      case MICROBIT:
+        this.previosulySelectedDeviceType = IODeviceType.MICROBIT;
+        break;
+      case DISPLAY_ONLY_MICROBIT:
+        this.previosulySelectedDeviceType = IODeviceType.DISPLAY_ONLY_MICROBIT;
+        break;
+    }
+  }
+
+  private Selection<Integer> createPlayerCountSelection() {
+    List<Integer> options = Arrays.asList(new Integer[] { 1, 2, 3, 4 });
+    return new Selection<>(
+        createDisplayConfig(),
+        "Select the Number of Players",
+        SelectionType.PLAYER_COUNT,
+        options);
+  }
+
+  private Selection<IODeviceType> createIoDeviceTypeSelection() {
+    List<IODeviceType> options = new ArrayList<>();
+    if (keyboardHasNotBeenSelected()) {
+      options.add(IODeviceType.KEYBOARD);
+    }
+    options.addAll(Arrays.asList(new IODeviceType[] {
+        IODeviceType.MICROBIT, IODeviceType.DISPLAY_ONLY_MICROBIT,
+    }));
+    String playerName = "Player " + (playerIoDevices.size() + 1);
+    return new Selection<>(
+        createDisplayConfig(),
+        "Select Device for " + playerName,
+        SelectionType.IO_DEVICE_TYPE,
+        options);
+  }
+
+  private boolean keyboardHasNotBeenSelected() {
+    for (IODevice d : playerIoDevices) {
+      if (d.equals(keyboard)) {
+        return false;
       }
-      if (inputDevice2 == null) {
-        this.inputDevice2 = (InputDevice) selectedValue;
-        if (this.inputDevice2 instanceof SerialDevice) {
-          ((SerialDevice) this.inputDevice2).initialiseSerialIO(this);
-        }
-        addAsOutputDeviceIfApplicable(selectedValue);
-        return;
-      }
     }
+    return true;
   }
 
-  private void addAsOutputDeviceIfApplicable(Object o) {
-    if (o instanceof OutputDevice) {
-      this.outputDevices.add((OutputDevice) o);
-    }
+  private Selection<String> createSerialPortSelection() {
+    String playerName = "Player " + (playerIoDevices.size() + 1);
+    return new Selection<String>(
+        createDisplayConfig(),
+        "Select Serial Port for " + playerName,
+        SelectionType.SERIAL_PORT,
+        getAvailableSerialPorts());
   }
 
-  private Selection<?> generateNextSelection() {
-    if (selectedGameMode == null) {
-      return generateGameModeSelection();
-    }
-    if (inputDevice1 == null) {
-      return generateInputDeviceSelectionForDevice1();
-    }
-    if (selectedGameMode == GameMode.HIDE_AND_SEEK_AND_DEFENCE && inputDevice2 == null) {
-      return generateInputDeviceSelectionForDevice2();
-    }
-    return null;
-  }
-
-  private Selection<GameMode> generateGameModeSelection() {
-    List<GameMode> options = Arrays.asList(new GameMode[] {
-        GameMode.HIDE_AND_SEEK_AND_DEFENCE, GameMode.DEFENCE_ONLY, GameMode.HIDE_AND_SEEK_ONLY,
-    });
-    return new Selection<GameMode>(createDisplayConfig(), "Select a Game Mode", options);
-  }
-
-  private Selection<InputDevice> generateInputDeviceSelection(String title, List<SerialDevice> devicesToExclude) {
-    List<InputDevice> options = getAvailableSerialInputDevices(devicesToExclude);
-    return new Selection<InputDevice>(createDisplayConfig(), title, options);
-  }
-
-  private List<InputDevice> getAvailableSerialInputDevices(List<SerialDevice> devicesToExclude) {
+  private List<String> getAvailableSerialPorts() {
     List<String> ports = new ArrayList<>();
     ports.addAll(Arrays.asList(Serial.list()));
 
-    for (SerialDevice d : devicesToExclude) {
-      ports.remove(d.getSerialPort());
+    for (SerialDevice d : getPlayerSerialDevices()) {
+      ports.remove(d.getSerialPortName());
     }
+    return ports;
+  }
 
-    List<InputDevice> devices = new ArrayList<>();
-    for (String port : ports) {
-      // Convert all to Microbits for now
-      InputDevice d = new Microbit(this, port);
-      devices.add(d);
-    }
-    if (inputDevice1 == null || !inputDevice1.equals(keyboardInputDevice)) {
-      devices.add(keyboardInputDevice);
+  private List<SerialDevice> getPlayerSerialDevices() {
+    List<SerialDevice> devices = new ArrayList<>();
+    for (IODevice d : playerIoDevices) {
+      if (d instanceof SerialDevice) {
+        devices.add((SerialDevice) d);
+      }
     }
     return devices;
   }
 
-  private Selection<InputDevice> generateInputDeviceSelectionForDevice1() {
-    return generateInputDeviceSelection("Choose Your Input Device for Player 1", Collections.emptyList());
+  private Selection<MicrobitColor> createPlayerColorSelection() {
+    List<MicrobitColor> options = getAvailableColors();
+    String playerName = "Player " + (playerColors.size() + 1);
+    return new Selection<MicrobitColor>(
+        createDisplayConfig(),
+        "Select a Colour for " + playerName,
+        SelectionType.COLOR,
+        options);
   }
 
-  private Selection<InputDevice> generateInputDeviceSelectionForDevice2() {
-    List<SerialDevice> devicesToExclude = inputDevice1 instanceof SerialDevice
-        ? Collections.singletonList((SerialDevice) inputDevice1)
-        : Collections.emptyList();
-
-    return generateInputDeviceSelection("Choose Your Input Device for Player 2", devicesToExclude);
-  }
-
-  private IOEventQueues getEventQueues() {
-    return new IOEventQueues(inputEventQueue, outputEventQueue);
+  private List<MicrobitColor> getAvailableColors() {
+    List<MicrobitColor> colors = new ArrayList<>();
+    colors.addAll(Arrays.asList(new MicrobitColor[] {
+        MicrobitColor.BLUE, MicrobitColor.YELLOW, MicrobitColor.GREEN, MicrobitColor.RED,
+    }));
+    colors.removeAll(playerColors);
+    return colors;
   }
 
   private DisplayConfig createDisplayConfig() {
@@ -263,20 +309,33 @@ public class Program extends PApplet {
     return config;
   }
 
-  private GameConfig createGameConfig(GameMode gameMode, InputDevice player1InputDevice,
-      InputDevice player2InputDevice) {
+  private Game createGame() {
+    return new Game(createGameConfig(), createDisplayConfig());
+  }
+
+  private GameConfig createGameConfig() {
     GameConfig config = new GameConfig();
-    config.gameMode = gameMode;
     config.microbitDefence = creatMicrobitDefenceConfig();
-    config.hideAndSeek = createHideAndSeekConfig();
-    config.player1 = new Player("Player 1", player1InputDevice);
-    config.player2 = new Player("Player 2", player2InputDevice);
+    config.players = createPlayers();
     config.scoreToWin = 3;
     return config;
   }
 
+  private List<Player> createPlayers() {
+    List<Player> players = new ArrayList<>();
+    for (int i = 0; i < playerCount; i += 1) {
+      String name = "Player " + (i + 1);
+      IODevice ioDevice = playerIoDevices.get(i);
+      MicrobitColor color = playerColors.get(i);
+      Player p = new Player(name, ioDevice, color);
+      players.add(p);
+    }
+    return players;
+  }
+
   private MicrobitDefenceConfig creatMicrobitDefenceConfig() {
     MicrobitDefenceConfig config = new MicrobitDefenceConfig();
+    config.maxPlayers = 4;
 
     config.attackers = new AttackersConfig();
     config.attackers.smallAttacker = new SingleAttackerConfig();
@@ -303,21 +362,11 @@ public class Program extends PApplet {
 
     config.defenceTarget = new DefenceTargetConfig();
     config.defenceTarget.damagedDisplayDuration = 400;
-    config.defenceTarget.defaultImage = ImageLoader.loadImageFromFilepath(this, "./assets/microbit_happy.png");
-    config.defenceTarget.damagedImage = ImageLoader.loadImageFromFilepath(this, "./assets/microbit_sad.png");
     config.defenceTarget.noImageDefaultColor = new Color(100, 255, 100);
     config.defenceTarget.noImageDamagedColor = new Color(255, 50, 50);
     config.defenceTarget.noImageHeight = 300;
     config.defenceTarget.noImageWidth = 300;
-
-    return config;
-  }
-
-  private HideAndSeekConfig createHideAndSeekConfig() {
-    HideAndSeekConfig config = new HideAndSeekConfig();
-
-    config.duration = 15000;
-    config.digitToDisplayUpTo = 9;
+    config.defenceTarget.initialHealth = 100;
 
     return config;
   }
