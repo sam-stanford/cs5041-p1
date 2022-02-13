@@ -1,10 +1,10 @@
 package io.events;
 
 public enum OutputEvent {
-  MICROBIT_SHORT_BEEP("bs"),
-  MICROBIT_LONG_BEEP("bl"),
-  MICROBIT_DISPLAY_SAD("ds"),
-  MICROBIT_DISPLAY_HAPPY("dh"),
+  MICROBIT_SHORT_BEEP("m_bs"),
+  MICROBIT_LONG_BEEP("m_bl"),
+  MICROBIT_DISPLAY_SAD("m_ds"),
+  MICROBIT_DISPLAY_HAPPY("m_dh"),
   UNRECOGNISED("");
 
   private final String eventValue;
@@ -23,13 +23,13 @@ public enum OutputEvent {
 
   public static OutputEvent fromEventValue(String eventValue) {
     switch (eventValue) {
-      case "bs":
+      case "m_bs":
         return MICROBIT_SHORT_BEEP;
-      case "bl":
+      case "m_bl":
         return MICROBIT_LONG_BEEP;
-      case "ds":
+      case "m_ds":
         return MICROBIT_DISPLAY_SAD;
-      case "dh":
+      case "m_dh":
         return MICROBIT_DISPLAY_HAPPY;
       default:
         return UNRECOGNISED;

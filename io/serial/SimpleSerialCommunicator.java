@@ -38,15 +38,15 @@ public class SimpleSerialCommunicator extends SerialCommunicator {
 
   private String generateInputEventMessageString(SerialMessage message) {
     StringBuilder sb = new StringBuilder();
-    sb.append("i");
     sb.append(message.inputEvent.toEventValue());
+    sb.append(getMessageDelimeter());
     return sb.toString();
   }
 
   private String generateOutputEventMessageString(SerialMessage message) {
     StringBuilder sb = new StringBuilder();
-    sb.append("o");
     sb.append(message.outputEvent.toEventValue());
+    sb.append(getMessageDelimeter());
     return sb.toString();
   }
 
@@ -56,24 +56,15 @@ public class SimpleSerialCommunicator extends SerialCommunicator {
       return SerialMessage.emptyMessage();
     }
 
-    SerialMessageType messageType;
-    switch (message.charAt(0)) {
-      case 'i':
-        messageType = SerialMessageType.INPUT;
-        break;
-      case 'o':
-        messageType = SerialMessageType.OUTPUT;
-        break;
-      default:
-        return SerialMessage.emptyMessage();
-    }
+    InputEvent parsedInputEvent = InputEvent.fromEventValue(message);
+    OutputEvent parsedOutputEvent = OutputEvent.fromEventValue(message);
 
-    if (messageType.equals(SerialMessageType.INPUT)) {
+    if (parsedInputEvent.isValid()) {
       InputEvent e = InputEvent.fromEventValue(message.substring(1));
       return new SerialMessage(e, null);
     }
 
-    if (messageType.equals(SerialMessageType.OUTPUT)) {
+    if (parsedOutputEvent.isValid()) {
       OutputEvent e = OutputEvent.fromEventValue(message.substring(1));
       return new SerialMessage(null, e);
     }

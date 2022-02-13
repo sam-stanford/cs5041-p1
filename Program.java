@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.stream.IntStream;
 
 import config.display.DisplayConfig;
 import config.game.GameConfig;
@@ -69,15 +70,25 @@ public class Program extends PApplet {
 
   @Override
   public void keyPressed() {
-    String input = Character.toString(this.key);
+    String input = "k_" + Character.toString(this.key);
     InputEvent e = InputEvent.fromEventValue(input);
     if (e.isValid()) {
       keyboardInputDevice.addInputEvent(e);
     }
   }
 
+  // Called by Processing:
+  // https://processing.org/reference/libraries/serial/Serial_serialEvent_.html
+  public void serialEvent(Serial serial) {
+    String s = serial.readStringUntil(':');
+    if (s != null) {
+      System.out.println(s);
+    }
+  }
+
   @Override
   public void draw() {
+    getInputEvents();
     handleOutputEvents();
 
     if (currentInteraction.isDone()) {
@@ -85,6 +96,15 @@ public class Program extends PApplet {
       startNextInteraction();
     }
     currentInteraction.draw(this);
+  }
+
+  private void getInputEvents() {
+    if (inputDevice1 != null) {
+      inputEventQueue.addAll(inputDevice1.getInputEvents());
+    }
+    if (inputDevice2 != null) {
+      inputEventQueue.addAll(inputDevice2.getInputEvents());
+    }
   }
 
   private void handleOutputEvents() {
