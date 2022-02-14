@@ -18,6 +18,7 @@ import io.events.InputEvent;
 import processing.core.PApplet;
 import utils.Color;
 import utils.Position;
+import utils.Time;
 
 public class MicrobitDefence implements Interaction {
 
@@ -25,6 +26,8 @@ public class MicrobitDefence implements Interaction {
   private List<Player> players;
   private List<DefenceLane> defenceLanes;
   private DisplayConfig displayConfig;
+  private long startTime;
+  private long rampUpTime;
 
   public MicrobitDefence(MicrobitDefenceConfig config, DisplayConfig displayConfig, List<Player> players) {
     if (players.size() > config.maxPlayers) {
@@ -36,6 +39,8 @@ public class MicrobitDefence implements Interaction {
     this.displayConfig = displayConfig;
     this.players = players;
     this.attackerFactory = new AttackerFactory(config.attackers);
+    this.rampUpTime = config.rampUpTime;
+    this.startTime = Time.getCurrentTimeMillis();
     createDefenceLanes(config.defenceTarget);
   }
 
@@ -49,12 +54,12 @@ public class MicrobitDefence implements Interaction {
       Player p = players.get(i);
       DefenceLaneSizing sizing = new DefenceLaneSizing(i * laneWidth, laneWidth, displayConfig.height);
       DefenceTarget target = new DefenceTarget(targetConfig, getDefenceTargetPosition(sizing), p.color);
-      DefenceLane lane = new DefenceLane(sizing, target, isGameOmnidirectional());
+      DefenceLane lane = new DefenceLane(sizing, target, isSinglePlayer());
       defenceLanes.add(lane);
     }
   }
 
-  private boolean isGameOmnidirectional() {
+  private boolean isSinglePlayer() {
     return players.size() == 1;
   }
 
@@ -65,12 +70,21 @@ public class MicrobitDefence implements Interaction {
 
   @Override
   public boolean isDone() {
-    return false;
+    int aliveDefenceCount = 0;
+    for (DefenceLane l : defenceLanes) {
+      if (!l.targetIsDestroyed()) {
+        aliveDefenceCount += 1;
+      }
+    }
+    if (isSinglePlayer()) {
+      return aliveDefenceCount == 0;
+    }
+    return aliveDefenceCount == 1;
   }
 
   @Override
   public InteractionType getType() {
-    return InteractionType.GAME;
+    return InteractionType.GAME_ROUND;
   }
 
   @Override
@@ -117,12 +131,19 @@ public class MicrobitDefence implements Interaction {
     for (int i = 0; i < players.size(); i += 1) {
       Player p = players.get(i);
       DefenceLane l = defenceLanes.get(i);
-      l.spawnAttackers(attackerFactory, getAvailableInputEventsForPlayer(p));
+      l.spawnAttackers(attackerFactory, getAvailableInputEventsForPlayer(p), getRampUpRatio());
     }
   }
 
   private List<InputEvent> getAvailableInputEventsForPlayer(Player player) {
     return player.ioDevice.getAvailableInputEvents();
+  }
+
+  private float getRampUpRatio() {
+    long now = Time.getCurrentTimeMillis();
+    long currentDuration = now - startTime;
+    double percentageRampedUp = (double) currentDuration / (double) rampUpTime;
+    return percentageRampedUp > 1 ? 1f : (float) percentageRampedUp;
   }
 
   private void updateLanes() {

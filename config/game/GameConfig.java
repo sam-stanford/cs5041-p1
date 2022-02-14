@@ -9,4 +9,5 @@ public class GameConfig {
   public int scoreToWin;
   public List<Player> players;
   public MicrobitDefenceConfig microbitDefence;
+  public long roundEndScreenDuration;
 }

@@ -49,7 +49,7 @@ public class DefenceLane implements Drawable {
     target.draw(app);
   }
 
-  public boolean isTargetDestroyed() {
+  public boolean targetIsDestroyed() {
     return target.isDestroyed();
   }
 
@@ -144,27 +144,24 @@ public class DefenceLane implements Drawable {
     return attackersAtIndexes;
   }
 
-  // TODO: Ramp-up
-  // TODO: Take config for frequency
-  public void spawnAttackers(AttackerFactory factory, List<InputEvent> possibleInputEvents) {
-    // TODO: Time limiter from config
-    float p = 0.05f;// TODO: Get proba from config - maybe replace with timeout actually
-    // TODO: Maybe timeout range for spawning
-    boolean shouldSpawn = Randomiser.eventWithProbability(p);
-    if (!shouldSpawn) {
-      return;
+  public void spawnAttackers(AttackerFactory factory, List<InputEvent> possibleInputEvents, float rampUpRatio) {
+    boolean shouldSpawnSmall = factory.generateShouldSpawnSmallAttackerEvent(rampUpRatio);
+    if (shouldSpawnSmall) {
+      Position initialPosition = generateAttackerPosition();
+      Position targetPosition = target.getPosition();
+      InputEvent damagingInput = selectRandomInputEvent(possibleInputEvents);
+      Attacker a = factory.createSmallAttacker(initialPosition, targetPosition, damagingInput);
+      attackers.add(a);
     }
 
-    Position initialPosition = generateAttackerPosition();
-    Position targetPosition = target.getPosition();
-    InputEvent damagingInput = selectRandomInputEvent(possibleInputEvents);
-    boolean shouldSpawnBig = Randomiser.eventWithProbability(0.2f); // TODO: Get proba from config
-
-    Attacker a = shouldSpawnBig
-        ? factory.createBigAttacker(initialPosition, targetPosition, damagingInput)
-        : factory.createSmallAttacker(initialPosition, targetPosition, damagingInput);
-
-    attackers.add(a);
+    boolean shouldSpawnBig = factory.generateShouldSpawnBigAttackerEvent(rampUpRatio);
+    if (shouldSpawnBig) {
+      Position initialPosition = generateAttackerPosition();
+      Position targetPosition = target.getPosition();
+      InputEvent damagingInput = selectRandomInputEvent(possibleInputEvents);
+      Attacker a = factory.createBigAttacker(initialPosition, targetPosition, damagingInput);
+      attackers.add(a);
+    }
   }
 
   private InputEvent selectRandomInputEvent(List<InputEvent> options) {

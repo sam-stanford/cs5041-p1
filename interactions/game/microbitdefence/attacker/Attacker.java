@@ -27,7 +27,11 @@ public class Attacker extends Collider implements Drawable {
   private Color damagedFillColor;
   private Color damagedTextColor;
 
-  public Attacker(SingleAttackerConfig config, Position initialPosition, Position target, InputEvent damagingInput) {
+  private float textSize;
+  private float textLeading;
+
+  public Attacker(SingleAttackerConfig config, Position initialPosition, Position target,
+      InputEvent damagingInput) {
     this.position = initialPosition;
     this.target = target;
     this.speed = config.speed;
@@ -40,19 +44,29 @@ public class Attacker extends Collider implements Drawable {
     this.damageDealt = config.damageDealt;
     this.damagedDisplayDuration = config.damagedDisplayDuration;
     this.health = config.health;
+    this.textSize = config.textSize;
+    this.textLeading = config.textLeading;
   }
 
   @Override
   public void draw(PApplet app) {
-    Color fillColor = displayAsDamaged() ? damagedFillColor : defaultFillColor;
-    Color textColor = displayAsDamaged() ? damagedTextColor : defaultTextColor;
+    drawShape(app);
+    drawText(app);
+  }
 
+  private void drawShape(PApplet app) {
+    Color c = displayAsDamaged() ? damagedFillColor : defaultFillColor;
     app.ellipseMode(PApplet.CENTER);
-    app.fill(fillColor.red, fillColor.green, fillColor.blue);
+    app.fill(c.red, c.green, c.blue);
     app.circle(position.x, position.y, size);
+  }
 
-    app.fill(textColor.red, textColor.green, textColor.blue);
+  private void drawText(PApplet app) {
+    Color c = displayAsDamaged() ? damagedTextColor : defaultTextColor;
+    app.fill(c.red, c.green, c.blue);
     app.textAlign(PApplet.CENTER, PApplet.CENTER);
+    app.textSize(textSize);
+    app.textLeading(textLeading);
     app.text(getDamagingInput().toDisplayValue(), position.x, position.y - 5);
   }
 

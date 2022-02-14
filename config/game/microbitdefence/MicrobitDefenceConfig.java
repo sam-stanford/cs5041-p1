@@ -7,4 +7,5 @@ public class MicrobitDefenceConfig {
   public int maxPlayers;
   public DefenceTargetConfig defenceTarget;
   public AttackersConfig attackers;
+  public int rampUpTime;
 }

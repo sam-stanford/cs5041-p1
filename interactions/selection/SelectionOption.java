@@ -1,5 +1,6 @@
 package interactions.selection;
 
+import config.display.DisplayConfig;
 import drawable.Drawable;
 import processing.core.PApplet;
 import utils.Color;
@@ -11,17 +12,17 @@ public class SelectionOption<T> implements Drawable {
   private float width;
   private float height;
   private T value;
+  private DisplayConfig displayConfig;
 
-  private Color fillColor = new Color(200, 200, 0);
-  private Color hoveredFillColor = new Color(255, 255, 0);
-  private Color textColor = new Color(0);
-  private Color hoveredTextColor = new Color(40);
+  private Color fillColor = new Color(210);
+  private Color hoveredFillColor = new Color(180);
 
-  public SelectionOption(Position position, float width, float height, T value) {
+  public SelectionOption(DisplayConfig displayConfig, Position position, float width, float height, T value) {
     this.position = position;
     this.width = width;
     this.height = height;
     this.value = value;
+    this.displayConfig = displayConfig;
   }
 
   @Override
@@ -32,16 +33,14 @@ public class SelectionOption<T> implements Drawable {
 
   private void drawContainer(PApplet app) {
     Color c = isHovered(app.mouseX, app.mouseY) ? hoveredFillColor : fillColor;
-
     app.rectMode(PApplet.CORNER);
     app.fill(c.red, c.blue, c.green);
     app.rect(position.x, position.y, width, height);
   }
 
   private void drawText(PApplet app) {
-    // TODO: Crop text
-    Color c = isHovered(app.mouseX, app.mouseY) ? hoveredTextColor : textColor;
-
+    Color c = displayConfig.defaultTextColor;
+    app.textSize(displayConfig.smallTextSize);
     app.textAlign(PApplet.CENTER, PApplet.CENTER);
     app.fill(c.red, c.blue, c.green);
     app.text(value.toString(), position.x + (width / 2), position.y + (height / 2));

@@ -20,18 +20,18 @@ public class Selection<T> implements Interaction {
   private int pageNumber = 0;
   private int visibleCount;
 
-  private Color backgroundColor;
+  private DisplayConfig displayConfig;
 
   private float windowMargin = 100;
   private float titleAreaHeight = 400;
   private float optionGutter = 40;
-  private float optionWidth = 400;
+  private float optionWidth = 600;
   private float optionHeight = 100;
 
   public Selection(DisplayConfig displayConfig, String title, SelectionType type, List<T> options) {
     this.title = title;
-    this.backgroundColor = displayConfig.backgroundColor;
     this.type = type;
+    this.displayConfig = displayConfig;
     createOptions(displayConfig, options);
     calculateVisibleCount(options.size(), displayConfig.width);
   }
@@ -46,6 +46,7 @@ public class Selection<T> implements Interaction {
     for (int i = 0; i < values.size(); i += 1) {
       this.options.add(
           new SelectionOption<T>(
+              displayConfig,
               getOptionPosition(i, displayConfig.width),
               optionWidth,
               optionHeight,
@@ -96,7 +97,7 @@ public class Selection<T> implements Interaction {
 
   @Override
   public void draw(PApplet app) {
-    app.background(backgroundColor.red, backgroundColor.blue, backgroundColor.green);
+    setBackground(app);
     drawTitle(app);
     if (options.size() == 0) {
       drawNoOptionsMessage(app);
@@ -106,18 +107,25 @@ public class Selection<T> implements Interaction {
     updateMouseCursor(app);
   }
 
-  private void drawNoOptionsMessage(PApplet app) {
-    // TODO: Color
-    app.textAlign(PApplet.CENTER, PApplet.CENTER);
-    app.textSize(52);
-    app.text("No Options Available...", app.width / 2, windowMargin + titleAreaHeight);
+  private void setBackground(PApplet app) {
+    Color c = displayConfig.backgroundColor;
+    app.background(c.red, c.blue, c.green);
   }
 
   private void drawTitle(PApplet app) {
-    // TODO: Color
+    Color c = displayConfig.defaultTextColor;
+    app.fill(c.red, c.green, c.blue);
     app.textAlign(PApplet.CENTER, PApplet.CENTER);
-    app.textSize(52);
+    app.textSize(displayConfig.bigTextSize);
     app.text(title, app.width / 2, windowMargin + (titleAreaHeight / 2));
+  }
+
+  private void drawNoOptionsMessage(PApplet app) {
+    Color c = displayConfig.defaultTextColor;
+    app.fill(c.red, c.green, c.blue);
+    app.textAlign(PApplet.CENTER, PApplet.CENTER);
+    app.textSize(displayConfig.smallTextSize);
+    app.text("No Options Available...", app.width / 2, windowMargin + titleAreaHeight);
   }
 
   private void drawOptions(PApplet app) {

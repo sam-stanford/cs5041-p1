@@ -9,9 +9,14 @@ public class SingleAttackerConfig {
   public Color damagedFillColor;
   public Color damagedTextColor;
 
+  public float textSize;
+  public float textLeading;
+  public long damagedDisplayDuration;
+
   public float speed;
   public float size;
   public int health;
   public DamageType damageDealt;
-  public long damagedDisplayDuration;
+  public float minSpawnFrequency;
+  public float maxSpawnFrequency;
 }

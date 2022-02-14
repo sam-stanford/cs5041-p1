@@ -29,27 +29,10 @@ import io.events.InputEvent;
 import processing.core.PApplet;
 import processing.serial.Serial;
 import utils.Color;
-import utils.ImageLoader;
 
 public class Program extends PApplet {
 
-  // TODO
-  // private enum SetupStage {
-  // PLAYER_COUNT_SELECTION,
-  // INPUT_DEVICE_SELECTION,
-  // PLAYER_COLOR_SELECTION,
-  // }
-
   private Keyboard keyboard = new Keyboard();
-  // TODO
-  // private Queue<SetupStage> remainingSetupStages = new LinkedList<>(
-  // Arrays.asList(new SetupStage[] {
-  // SetupStage.PLAYER_COLOR_SELECTION,
-  // SetupStage.INPUT_DEVICE_SELECTION,
-  // SetupStage.PLAYER_COLOR_SELECTION,
-  // }));
-
-  // private SetupStage currentSetupStage = null;
   private Interaction currentInteraction;
 
   private int playerCount;
@@ -191,7 +174,8 @@ public class Program extends PApplet {
         break;
 
       case GAME:
-        currentInteraction = new EndScreen();
+        Game g = (Game) currentInteraction;
+        currentInteraction = new EndScreen(createDisplayConfig(), g.getEndGameText());
 
       case END_SCREEN:
         break;
@@ -306,6 +290,9 @@ public class Program extends PApplet {
     config.height = this.height;
     config.width = this.width;
     config.backgroundColor = new Color(255);
+    config.defaultTextColor = new Color(40);
+    config.bigTextSize = 100;
+    config.smallTextSize = 32;
     return config;
   }
 
@@ -318,6 +305,7 @@ public class Program extends PApplet {
     config.microbitDefence = creatMicrobitDefenceConfig();
     config.players = createPlayers();
     config.scoreToWin = 3;
+    config.roundEndScreenDuration = 3000;
     return config;
   }
 
@@ -336,29 +324,38 @@ public class Program extends PApplet {
   private MicrobitDefenceConfig creatMicrobitDefenceConfig() {
     MicrobitDefenceConfig config = new MicrobitDefenceConfig();
     config.maxPlayers = 4;
+    config.rampUpTime = 15000;
 
     config.attackers = new AttackersConfig();
     config.attackers.smallAttacker = new SingleAttackerConfig();
-    config.attackers.smallAttacker.defaultFillColor = new Color(10);
-    config.attackers.smallAttacker.defaultTextColor = new Color(255, 255, 0);
+    config.attackers.smallAttacker.defaultFillColor = new Color(250);
+    config.attackers.smallAttacker.defaultTextColor = new Color(40);
     config.attackers.smallAttacker.damagedFillColor = new Color(255, 0, 0);
-    config.attackers.smallAttacker.damagedTextColor = new Color(0);
+    config.attackers.smallAttacker.damagedTextColor = new Color(40);
     config.attackers.smallAttacker.health = 1;
-    config.attackers.smallAttacker.size = 60;
-    config.attackers.smallAttacker.speed = 8;
+    config.attackers.smallAttacker.size = 100;
+    config.attackers.smallAttacker.speed = 3;
     config.attackers.smallAttacker.damageDealt = DamageType.SMALL;
     config.attackers.smallAttacker.damagedDisplayDuration = 200;
+    config.attackers.smallAttacker.textSize = 30;
+    config.attackers.smallAttacker.textLeading = 25;
+    config.attackers.smallAttacker.minSpawnFrequency = 0.002f;
+    config.attackers.smallAttacker.maxSpawnFrequency = 0.1f;
 
     config.attackers.bigAttacker = new SingleAttackerConfig();
-    config.attackers.bigAttacker.defaultFillColor = new Color(100);
-    config.attackers.bigAttacker.defaultTextColor = new Color(255, 0, 255);
+    config.attackers.bigAttacker.defaultFillColor = new Color(40);
+    config.attackers.bigAttacker.defaultTextColor = new Color(250);
     config.attackers.bigAttacker.damagedFillColor = new Color(255, 0, 0);
-    config.attackers.bigAttacker.damagedTextColor = new Color(0);
+    config.attackers.bigAttacker.damagedTextColor = new Color(40);
     config.attackers.bigAttacker.health = 3;
-    config.attackers.bigAttacker.size = 180;
-    config.attackers.bigAttacker.speed = 3;
+    config.attackers.bigAttacker.size = 260;
+    config.attackers.bigAttacker.speed = 1.5f;
     config.attackers.bigAttacker.damageDealt = DamageType.BIG;
     config.attackers.bigAttacker.damagedDisplayDuration = 200;
+    config.attackers.bigAttacker.textSize = 30;
+    config.attackers.bigAttacker.textLeading = 25;
+    config.attackers.bigAttacker.minSpawnFrequency = 0.0001f;
+    config.attackers.bigAttacker.maxSpawnFrequency = 0.05f;
 
     config.defenceTarget = new DefenceTargetConfig();
     config.defenceTarget.damagedDisplayDuration = 400;

@@ -12,13 +12,26 @@ public class DisplayOnlyMicrobit extends Microbit {
     super(app, serialPort);
   }
 
-  private OutputEvent[] availableOutputEvents = new OutputEvent[] {
+  private List<OutputEvent> availableOutputEvents = Arrays.asList(new OutputEvent[] {
       OutputEvent.MICROBIT_DISPLAY_HAPPY,
       OutputEvent.MICROBIT_DISPLAY_SAD,
-  };
+  });
 
   @Override
   public List<OutputEvent> getAvailableOutputEvents() {
-    return Arrays.asList(availableOutputEvents);
+    return availableOutputEvents;
+  }
+
+  @Override
+  public boolean acceptsOutputEvent(OutputEvent e) {
+    return availableOutputEvents.contains(e);
+  }
+
+  @Override
+  public void outputEvent(OutputEvent e) {
+    if (!acceptsOutputEvent(e)) {
+      return;
+    }
+    super.outputEvent(e);
   }
 }
